@@ -1,0 +1,570 @@
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/markheilner/Documents/Stata/DE3/logde3revised.log
+  log type:  text
+ opened on:   5 Dec 2024, 15:13:03
+
+. 
+
+. do "/var/folders/rv/_0h726fn3sx8dldgsbxjxv_h0000gn/T//SD89967.000000"
+
+. *****************************************************
+. * Data Exercise 3
+. *****************************************************
+. 
+. clear all
+
+. set more off
+
+. 
+. **********************************
+. * 1. Load and Clean PWT Data
+. **********************************
+. use pwt1001.dta, clear
+
+. 
+. * Keep only 1970-1999
+. keep if year >= 1970 & year <= 1999
+(7,320 observations deleted)
+
+. * Standardize country names if needed
+. replace country = "South Korea" if country == "Republic of Korea"
+(30 real changes made)
+
+. replace country = "Vietnam" if country == "Viet Nam"
+(30 real changes made)
+
+. replace country = "Ivory Coast" if country == "Côte d'Ivoire"
+(30 real changes made)
+
+. replace country = "Czech Republic" if country == "Czechoslovakia"
+(0 real changes made)
+
+. replace country = "Congo, Dem. Rep." if country == "Democratic Republic of the Congo"
+(0 real changes made)
+
+. replace country = "Congo, Rep." if country == "Republic of the Congo"
+(0 real changes made)
+
+. replace country = "Russia" if country == "Russian Federation"
+(30 real changes made)
+
+. replace country = "Syria" if country == "Syrian Arab Republic"
+(30 real changes made)
+
+. replace country = "Iran" if country == "Iran (Islamic Republic of)"
+(30 real changes made)
+
+. replace country = "Bolivia" if country == "Bolivia (Plurinational State of)"
+(30 real changes made)
+
+. replace country = "Venezuala" if country == "Venezuela (Bolivarian Republic of)"
+(30 real changes made)
+
+. replace country = "Tanzania" if country == "U.R. of Tanzania: Mainland"
+(30 real changes made)
+
+. replace country = "Macedonia" if country == "North Macedonia"
+(30 real changes made)
+
+. replace country = "Laos" if country == "Lao People's DR"
+(30 real changes made)
+
+. keep country year rgdpe pop hc csh_i csh_x csh_m labsh
+
+. * Drop observations with missing key vars if necessary
+. drop if missing(country, year, rgdpe, pop)
+(539 observations deleted)
+
+. * Save cleaned PWT data
+. save pwt_clean.dta, replace
+file pwt_clean.dta saved
+
+. 
+. **********************************
+. * 2. Load and Clean chat Data
+. **********************************
+. use chat.dta, clear
+
+. * Keep only 1970-1999
+. keep if year >= 1970 & year <= 1999
+(36,869 observations deleted)
+
+. 
+. * Standardize country names similarly
+. replace country_name = "South Korea" if country_name == "South Korea"
+(0 real changes made)
+
+. replace country_name = "Ivory Coast" if country_name == "Côte d'Ivoire"
+(0 real changes made)
+
+. replace country_name = "Congo, Dem. Rep." if country_name == "Democratic Republic of the Congo"
+(30 real changes made)
+
+. replace country_name = "Congo, Rep." if country_name == "Republic of the Congo"
+(30 real changes made)
+
+. replace country_name = "Russia" if country_name == "Russian Federation"
+(0 real changes made)
+
+. replace country_name = "Syria" if country_name == "Syrian Arab Republic"
+(0 real changes made)
+
+. replace country_name = "Iran" if country_name == "Iran (Islamic Republic of)"
+(0 real changes made)
+
+. replace country_name = "Bosnia and Herzegovina" if country_name == "Bosnia-Herzegovina"
+(30 real changes made)
+
+. replace country_name = "Slovakia" if country_name == "Slovak Republic"
+(30 real changes made)
+
+. rename country_name country
+
+. * Keep selected tech variables
+. keep country year ag_tractor elecprod fert_total radio tv
+
+. 
+. * Drop observations missing country/year
+. drop if missing(country, year)
+(0 observations deleted)
+
+. 
+. * Save cleaned chat data
+. save chat_clean.dta, replace
+file chat_clean.dta saved
+
+. 
+. **********************************
+. * 3. Merge Datasets
+. **********************************
+. use pwt_clean.dta, clear
+
+. merge 1:1 country year using chat_clean.dta
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                         2,119
+        from master                     1,120  (_merge==1)
+        from using                        999  (_merge==2)
+
+    Matched                             3,831  (_merge==3)
+    -----------------------------------------
+
+. 
+. * Drop unmatched observations
+. drop if _merge != 3
+(2,119 observations deleted)
+
+. drop _merge
+
+. 
+. * Now we have rgdpe, pop, hc, csh_i, csh_x, csh_m, labsh plus tech vars
+. 
+. **********************************
+. * 4. Apply Data Restrictions
+. * For example, drop countries with fewer than 20 years of data
+. **********************************
+. bysort country: gen countyrs = _N
+
+. drop if countyrs < 20
+(231 observations deleted)
+
+. drop countyrs
+
+. 
+. save merged_data.dta, replace
+file merged_data.dta saved
+
+. 
+. **********************************
+. * 5. Calculate Growth Rates
+. **********************************
+. use merged_data.dta, clear
+
+. 
+. * Reshape to wide format including all variables that vary by year
+. reshape wide rgdpe ag_tractor elecprod fert_total radio tv pop hc labsh csh_i csh_x csh_m, i(country) j(year)
+(j = 1970 1971 1972 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 1998 1999)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations            3,600   ->   120         
+Number of variables                  14   ->   361         
+j variable (30 values)             year   ->   (dropped)
+xij variables:
+                                  rgdpe   ->   rgdpe1970 rgdpe1971 ... rgdpe1999
+                             ag_tractor   ->   ag_tractor1970 ag_tractor1971 ... ag_tractor1999
+                               elecprod   ->   elecprod1970 elecprod1971 ... elecprod1999
+                             fert_total   ->   fert_total1970 fert_total1971 ... fert_total1999
+                                  radio   ->   radio1970 radio1971 ... radio1999
+                                     tv   ->   tv1970 tv1971 ... tv1999
+                                    pop   ->   pop1970 pop1971 ... pop1999
+                                     hc   ->   hc1970 hc1971 ... hc1999
+                                  labsh   ->   labsh1970 labsh1971 ... labsh1999
+                                  csh_i   ->   csh_i1970 csh_i1971 ... csh_i1999
+                                  csh_x   ->   csh_x1970 csh_x1971 ... csh_x1999
+                                  csh_m   ->   csh_m1970 csh_m1971 ... csh_m1999
+-----------------------------------------------------------------------------
+
+. 
+. * Calculate growth rates for GDP and technology variables only
+. foreach var in rgdpe ag_tractor elecprod fert_total radio tv {
+  2.     forvalues y = 1970(1)1998 {
+  3.         gen g_`var'`y' = 100 * ((`var'`y'+1 - `var'`y') / `var'`y') if !missing(`var'`y', `var'`y'+1)
+  4.     }
+  5. }
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(9 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(6 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(7 missing values generated)
+(6 missing values generated)
+(5 missing values generated)
+(6 missing values generated)
+(7 missing values generated)
+(30 missing values generated)
+(30 missing values generated)
+(30 missing values generated)
+(30 missing values generated)
+(35 missing values generated)
+(8 missing values generated)
+(9 missing values generated)
+(7 missing values generated)
+(4 missing values generated)
+(4 missing values generated)
+(4 missing values generated)
+(4 missing values generated)
+(5 missing values generated)
+(4 missing values generated)
+(6 missing values generated)
+(3 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(6 missing values generated)
+(6 missing values generated)
+(6 missing values generated)
+(7 missing values generated)
+(4 missing values generated)
+(4 missing values generated)
+(4 missing values generated)
+(5 missing values generated)
+(6 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(6 missing values generated)
+(6 missing values generated)
+(5 missing values generated)
+(5 missing values generated)
+(4 missing values generated)
+(9 missing values generated)
+(7 missing values generated)
+(7 missing values generated)
+(7 missing values generated)
+(6 missing values generated)
+(4 missing values generated)
+(3 missing values generated)
+(3 missing values generated)
+(3 missing values generated)
+(3 missing values generated)
+(3 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(31 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(27 missing values generated)
+(19 missing values generated)
+(17 missing values generated)
+(16 missing values generated)
+(15 missing values generated)
+(14 missing values generated)
+(13 missing values generated)
+(13 missing values generated)
+(13 missing values generated)
+(11 missing values generated)
+(10 missing values generated)
+(6 missing values generated)
+(6 missing values generated)
+(2 missing values generated)
+(2 missing values generated)
+(1 missing value generated)
+(2 missing values generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+
+. 
+. * Reshape back to long format
+. reshape long rgdpe ag_tractor elecprod fert_total radio tv pop hc labsh csh_i csh_x csh_m g_rgdpe g_ag_tractor g_elecprod g_fert_total g_radio g_tv, i(count
+> ry) j(year)
+(j = 1970 1971 1972 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 1998 1999)
+(variable g_rgdpe1999 not found)
+(variable g_ag_tractor1999 not found)
+(variable g_elecprod1999 not found)
+(variable g_fert_total1999 not found)
+(variable g_radio1999 not found)
+(variable g_tv1999 not found)
+
+Data                               Wide   ->   Long
+-----------------------------------------------------------------------------
+Number of observations              120   ->   3,600       
+Number of variables                 535   ->   20          
+j variable (30 values)                    ->   year
+xij variables:
+      rgdpe1970 rgdpe1971 ... rgdpe1999   ->   rgdpe
+ag_tractor1970 ag_tractor1971 ... ag_tractor1999->ag_tractor
+elecprod1970 elecprod1971 ... elecprod1999->   elecprod
+fert_total1970 fert_total1971 ... fert_total1999->fert_total
+      radio1970 radio1971 ... radio1999   ->   radio
+               tv1970 tv1971 ... tv1999   ->   tv
+            pop1970 pop1971 ... pop1999   ->   pop
+               hc1970 hc1971 ... hc1999   ->   hc
+      labsh1970 labsh1971 ... labsh1999   ->   labsh
+      csh_i1970 csh_i1971 ... csh_i1999   ->   csh_i
+      csh_x1970 csh_x1971 ... csh_x1999   ->   csh_x
+      csh_m1970 csh_m1971 ... csh_m1999   ->   csh_m
+g_rgdpe1970 g_rgdpe1971 ... g_rgdpe1999   ->   g_rgdpe
+g_ag_tractor1970 g_ag_tractor1971 ... g_ag_tractor1999->g_ag_tractor
+g_elecprod1970 g_elecprod1971 ... g_elecprod1999->g_elecprod
+g_fert_total1970 g_fert_total1971 ... g_fert_total1999->g_fert_total
+g_radio1970 g_radio1971 ... g_radio1999   ->   g_radio
+         g_tv1970 g_tv1971 ... g_tv1999   ->   g_tv
+-----------------------------------------------------------------------------
+
+. 
+. * Drop 1999 since we can't calculate growth into 2000
+. drop if year == 1999
+(120 observations deleted)
+
+. 
+. save growth_data.dta, replace
+file growth_data.dta saved
+
+. 
+. 
+. **********************************
+. * 6. Create Developed Dummy
+. **********************************
+. use growth_data.dta, clear
+
+. gen developed = 0
+
+. replace developed = 1 if inlist(country,"France","Germany","Italy","Japan","United Kingdom","United States")
+(174 real changes made)
+
+. 
+. save growth_data_with_dev.dta, replace
+file growth_data_with_dev.dta saved
+
+. 
+. **********************************
+. * 7. Weighted Averages by Developed Status
+. **********************************
+. * We already have pop from the merged dataset. Just to confirm, we might need to re-merge population if needed.
+. 
+. * If we need population separately:
+. use growth_data_with_dev.dta, clear
+
+. * pop should be there from earlier steps since we kept it from PWT data
+. 
+. collapse (mean) g_rgdpe g_ag_tractor g_elecprod g_fert_total g_radio g_tv hc csh_i csh_x csh_m labsh [aw=pop], by(developed year)
+
+. 
+. 
+. graph twoway ///
+>     (line g_rgdpe year if developed==1, lcolor(blue) lwidth(medthick)) ///
+>     (line g_rgdpe year if developed==0, lcolor(red) lwidth(medthick)), ///
+>     title("Population-Weighted Average GDP Growth: Developed vs. Non-Developed") ///
+>     legend(order(1 "Developed" 2 "Non-Developed"))
+
+. 
+. save dev_nondev_summary.dta, replace
+file dev_nondev_summary.dta saved
+
+. 
+. **********************************
+. * 8. Summary Statistics
+. **********************************
+. * For summary stats, go back to the detailed dataset with all countries
+. use growth_data_with_dev.dta, clear
+
+. 
+. gen trade_openness = csh_x + csh_m
+
+. 
+. tabstat g_rgdpe g_ag_tractor g_elecprod g_fert_total g_radio g_tv hc csh_i trade_openness labsh, ///
+>     statistics(mean sd min max) columns(statistics)
+
+    Variable |      Mean        SD       Min       Max
+-------------+----------------------------------------
+     g_rgdpe |  .0099748   .021622  7.72e-06   .212005
+g_ag_tractor |   .312797  1.324015   .000019  33.33333
+  g_elecprod |  6.54e-07  5.90e-06  3.12e-11     .0001
+g_fert_total |  .0327491  .1515913  2.78e-06  4.761905
+     g_radio |  .3029665  .8573991  .0001724        20
+        g_tv |   .025574  .2630581  2.46e-07        10
+          hc |  1.917682  .6669184  1.007409  3.555839
+       csh_i |  .2071299  .1143327  -.101107  .9502093
+trade_open~s | -.0323445  .1335866 -1.167603   .976071
+       labsh |  .5301355  .1298338  .1508483  .8965429
+------------------------------------------------------
+
+. 
+. **********************************
+. * 9. Regression Analysis
+. **********************************
+. * Simple regression including controls
+. reg g_rgdpe g_ag_tractor g_elecprod g_fert_total g_radio g_tv hc csh_i trade_openness labsh
+
+      Source |       SS           df       MS      Number of obs   =     2,264
+-------------+----------------------------------   F(9, 2254)      =    413.56
+       Model |  .047327874         9  .005258653   Prob > F        =    0.0000
+    Residual |  .028660975     2,254  .000012716   R-squared       =    0.6228
+-------------+----------------------------------   Adj R-squared   =    0.6213
+       Total |  .075988849     2,263  .000033579   Root MSE        =    .00357
+
+--------------------------------------------------------------------------------
+       g_rgdpe | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+---------------+----------------------------------------------------------------
+  g_ag_tractor |   .0026612    .000163    16.33   0.000     .0023417    .0029808
+    g_elecprod |   330.0795   49.10763     6.72   0.000     233.7786    426.3804
+  g_fert_total |   .0016458   .0005548     2.97   0.003     .0005578    .0027339
+       g_radio |   .0152007   .0004145    36.67   0.000     .0143879    .0160136
+          g_tv |  -.0001213    .000295    -0.41   0.681    -.0006998    .0004573
+            hc |  -.0005733   .0001325    -4.33   0.000    -.0008331   -.0003134
+         csh_i |  -.0083421   .0007396   -11.28   0.000    -.0097925   -.0068917
+trade_openness |  -.0056807   .0006472    -8.78   0.000    -.0069498   -.0044116
+         labsh |   .0019179   .0006459     2.97   0.003     .0006513    .0031845
+         _cons |   .0032225   .0004152     7.76   0.000     .0024082    .0040367
+--------------------------------------------------------------------------------
+
+. 
+. * Separate by developed status
+. reg g_rgdpe g_ag_tractor g_elecprod g_fert_total g_radio g_tv hc csh_i trade_openness labsh if developed == 1
+
+      Source |       SS           df       MS      Number of obs   =       157
+-------------+----------------------------------   F(9, 147)       =    367.65
+       Model |  1.3217e-07         9  1.4685e-08   Prob > F        =    0.0000
+    Residual |  5.8716e-09       147  3.9943e-11   R-squared       =    0.9575
+-------------+----------------------------------   Adj R-squared   =    0.9549
+       Total |  1.3804e-07       156  8.8486e-10   Root MSE        =    6.3e-06
+
+--------------------------------------------------------------------------------
+       g_rgdpe | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+---------------+----------------------------------------------------------------
+  g_ag_tractor |   .0917168   .0111687     8.21   0.000     .0696447    .1137888
+    g_elecprod |     7524.4   12749.76     0.59   0.556    -17672.11    32720.91
+  g_fert_total |   .3211248   .0592019     5.42   0.000     .2041281    .4381215
+       g_radio |  -.0000275   .0019085    -0.01   0.989    -.0037991    .0037441
+          g_tv |   9.882485   1.144057     8.64   0.000     7.621561    12.14341
+            hc |  -4.50e-06   3.16e-06    -1.42   0.157    -.0000107    1.75e-06
+         csh_i |  -.0000848   .0000156    -5.43   0.000    -.0001157    -.000054
+trade_openness |  -.0000399   .0000291    -1.37   0.172    -.0000973    .0000176
+         labsh |   .0000473   .0000232     2.03   0.044     1.35e-06    .0000932
+         _cons |   .0000111   .0000165     0.67   0.503    -.0000216    .0000437
+--------------------------------------------------------------------------------
+
+. reg g_rgdpe g_ag_tractor g_elecprod g_fert_total g_radio g_tv hc csh_i trade_openness labsh if developed == 0
+
+      Source |       SS           df       MS      Number of obs   =     2,107
+-------------+----------------------------------   F(9, 2097)      =    367.12
+       Model |   .04504285         9  .005004761   Prob > F        =    0.0000
+    Residual |  .028587546     2,097  .000013633   R-squared       =    0.6117
+-------------+----------------------------------   Adj R-squared   =    0.6101
+       Total |  .073630395     2,106  .000034962   Root MSE        =    .00369
+
+--------------------------------------------------------------------------------
+       g_rgdpe | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+---------------+----------------------------------------------------------------
+  g_ag_tractor |   .0026677   .0001688    15.80   0.000     .0023366    .0029988
+    g_elecprod |   329.6847   50.86575     6.48   0.000     229.9321    429.4373
+  g_fert_total |   .0016611   .0005746     2.89   0.004     .0005343    .0027879
+       g_radio |   .0151608   .0004299    35.27   0.000     .0143177    .0160039
+          g_tv |  -.0001194   .0003055    -0.39   0.696    -.0007185    .0004796
+            hc |  -.0005237   .0001444    -3.63   0.000    -.0008068   -.0002406
+         csh_i |  -.0084178   .0007737   -10.88   0.000    -.0099351   -.0069004
+trade_openness |  -.0056873   .0006721    -8.46   0.000    -.0070053   -.0043693
+         labsh |   .0020193   .0006743     2.99   0.003      .000697    .0033416
+         _cons |   .0031218   .0004418     7.07   0.000     .0022554    .0039881
+--------------------------------------------------------------------------------
+
+. 
+. save final_results.dta, replace
+file final_results.dta saved
+
+. 
+. *****************************************************
+. * End of Do-File
+. *****************************************************
+. 
+end of do-file
+
+. log close
+      name:  <unnamed>
+       log:  /Users/markheilner/Documents/Stata/DE3/logde3revised.log
+  log type:  text
+ closed on:   5 Dec 2024, 15:13:21
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
